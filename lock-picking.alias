@@ -34,16 +34,32 @@
       C = "#FFFF00"
       title += f"{name} {titleBase}\n"
 
+   initialDieRoll = roll(d20)
+
+   # Halfling Luck
+   lucky = False
+   if initialDieRoll == 1 and isLucky:
+      lucky = True
+      finalDieRoll = roll(d20)
+      d20 = "1d20ro1" # Since we're manually rerolling, this needs to come after roll(d20)
+   else:
+      finalDieRoll = initialDieRoll
    # Generate results
    inputBonusString = args.last('b')
    inputBonus = 0
    if inputBonusString:
       inputBonus = roll(inputBonusString)
 
-   dieRoll = roll(d20)
-   rollResult = dieRoll + dexterityMod + skillBonus + inputBonus
+   rollResult = finalDieRoll + dexterityMod + skillBonus + inputBonus
 
-   rollDescription = f"{d20} ({dieRoll}) + {dexterityMod}"
+   # Generate results output
+   rollDescription = f"{d20} ("
+
+   if lucky:
+      rollDescription += f"~~1~~, Lucky => "
+
+
+   rollDescription += f"{finalDieRoll}) + {dexterityMod}"
 
    if skillBonus > 0:
       rollDescription += f" + {skillBonus}"
