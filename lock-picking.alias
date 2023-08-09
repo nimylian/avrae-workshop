@@ -44,6 +44,14 @@
       d20 = "1d20ro1" # Since we're manually rerolling, this needs to come after roll(d20)
    else:
       finalDieRoll = initialDieRoll
+
+   # Rogue Reliable Talent
+   reliableTalent = False
+   if finalDieRoll <= 9 and rogueLevel >= 11:
+      reliableTalent = True
+      initialDieRoll = finalDieRoll
+      finalDieRoll = 10
+
    # Generate results
    inputBonusString = args.last('b')
    inputBonus = 0
@@ -58,6 +66,8 @@
    if lucky:
       rollDescription += f"~~1~~, Lucky => "
 
+   if reliableTalent:
+      rollDescription += f"~~{initialDieRoll}~~, Reliable Talent => "
 
    rollDescription += f"{finalDieRoll}) + {dexterityMod}"
 
