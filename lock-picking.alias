@@ -1,0 +1,70 @@
+!alias foo embed
+<drac2>
+   d20 = "1d20"
+   char = character()
+   args = argparse(&ARGS&)
+   titleBase = f"attempts to pick a lock!\n"
+   skillBonus = 0
+   inputBonus = 0
+   desc = ''
+
+
+
+   dc = args.last('dc')
+   if dc:
+      desc += f"DC {dc}\n"
+
+   if args.get('expert') and char.levels.get('Rogue'):
+      C = "#FF00FF"
+      T = f"Expert lock-picker, {name}, {titleBase}"
+      skillBonus = proficiencyBonus * 2
+   elif args.get('pro'):
+      C = "#0000FF"
+      T = f"Deftly, {name} {titleBase}"
+   elif args.get('jack') and char.levels.get('Bard') == 2:
+      C = "#999999"
+      T = f"Jack-of-all-trades, {name}, {titleBase}"
+      skillBonus = floor(proficiencyBonus / 2)
+   else:
+      C = "#FFFF00"
+      T = f"{name} {titleBase}\n"
+
+   b = args.last('b')
+   if b:
+      inputBonusString = b
+      inputBonus = roll(inputBonusString)
+
+   dieRoll = roll(d20)
+   rollResult = dieRoll + dexterityMod + skillBonus + inputBonus
+
+   rollDescription = f"{d20} ({dieRoll}) + {dexterityMod}"
+
+   if skillBonus > 0:
+      rollDescription += f" + {skillBonus}"
+
+   if inputBonus > 0:
+      if 'd' in inputBonusString:
+         inputBonusDescription = f"{inputBonusString} ({inputBonus})"
+      else:
+         inputBonusDescription = inputBonusString
+         
+      rollDescription += f" + {inputBonusDescription}"
+
+   rollDescription += f" = {rollResult}\n\n"   
+
+   desc += rollDescription
+
+   if dc:
+      if rollResult >= int(dc):
+         C = "#00FF00"
+         desc += "Success!"
+      else:
+         C = "#FF0000"
+         desc += "Failure!"
+
+   D = desc
+</drac2>
+-desc "{{D}}"
+-title "{{T}}"
+-color "{{C}}"
+-thumb "https://2e.aonprd.com/Images/Treasure/Thieves_Tools.webp"
