@@ -1,103 +1,89 @@
-!alias foo embed
+!alias pick embed
 <drac2>
-   args = argparse(&ARGS&)
-   char = character()
+  char = character()
+  args = argparse(&ARGS&)
+  d20 = args.last('dice') or "1d20"
+  phrase = args.last('phrase')
+  desc = f"{phrase}\n" if phrase else ''
+  thumb = args.last('thumb') or "https://2e.aonprd.com/Images/Treasure/Thieves_Tools.webp"
+  image = args.last('image')
 
-   d20 = args.last('dice') or "1d20"
-   titleBase = "attempts to pick a lock!"
-   skillBonus = 0
-   desc = ''
-   title = ''
-   rogueLevel = char.levels.get('Rogue')
-   canBeExpert = rogueLevel >= 1
-   isLucky = "Halfling" in char.race
+  isPro = args.get('pro') or get('lockPicker', '').lower() == 'pro'
+  if isPro and get('lockPicker') != 'pro':
+    character().set_cvar('lockPicker', 'pro')
+    desc += '(Set Lock-Picker skill level to "pro" for future uses.\n`!cvar delete lockPicker` to undo)\n\n'
 
-   dc = args.last('dc')
-   if dc:
-      desc += f"DC {dc}\n"
+  rogueLevel = char.levels.get('Rogue')
+  canBeExpert = rogueLevel >= 1 
+  isExpert = canBeExpert and (args.get('expert') or get('lockPicker', '').lower() == 'expert')
+  if isExpert and get('lockPicker') != 'expert':
+    character().set_cvar('lockPicker', 'expert')
+    desc += '(Set Lock-Picker skill level to "expert" for future uses.\n`!cvar delete lockPicker` to undo)\n\n'
 
-   if isLucky:
-      title += f"Lucky "
+  titleBase = "attempts to pick a lock!"
+  if isExpert:
+    color = "#FF00FF"
+    title = f"expert lock-picker, {name}, {titleBase}"
+    skillBonus = proficiencyBonus * 2
+  elif isPro:
+    color = "#0000FF"
+    title = f"{name} deftly {titleBase}"
+    skillBonus = proficiencyBonus
+  elif char.levels.get('Bard') >= 2:
+    color = "#999999"
+    title = f"jack-of-all-trades, {name}, {titleBase}"
+    skillBonus = floor(proficiencyBonus / 2)
+  else:
+    color = "#FFFF00"
+    title = f"{name} {titleBase}"
+    skillBonus = 0
 
-   if args.get('expert') and canBeExpert:
-      C = "#FF00FF"
-      title += f"expert lock-picker, {name}, {titleBase}"
-      skillBonus = proficiencyBonus * 2
-   elif args.get('pro'):
-      C = "#0000FF"
-      title += f"{name} deftly {titleBase}"
-   elif char.levels.get('Bard') >= 2:
-      C = "#999999"
-      title += f"jack-of-all-trades, {name}, {titleBase}"
-      skillBonus = floor(proficiencyBonus / 2)
-   else:
-      C = "#FFFF00"
-      title += f"{name} {titleBase}\n"
+  adv = args.get('adv')
+  dis = args.get('dis')
+  if (adv or dis) and not (adv and dis):
+    d20 = f"{d20.replace('1', '2')}k{'h' if adv else 'l'}1"
+  if ("Halfling" in char.race): # Halfling Luck
+    d20 += "ro1"
+  if rogueLevel >= 11: # Rogue Reliable Talent
+    d20 += "mi10"
+  if args.last('b'):
+    d20 += f"+{args.last('b')}"
+  if dexterityMod != 0:
+    d20 += f"+{dexterityMod}"
+  if skillBonus != 0:
+    d20 += f"+{skillBonus}"
 
-   initialDieRoll = roll(d20)
+  dc = args.last('dc')
+  if dc:
+    desc += f"DC **{dc}**\n"
 
-   # Halfling Luck
-   lucky = False
-   if initialDieRoll == 1 and isLucky:
-      lucky = True
-      finalDieRoll = roll(d20)
-      d20 = "1d20ro1" # Since we're manually rerolling, this needs to come after roll(d20)
-   else:
-      finalDieRoll = initialDieRoll
+  diceRoll = vroll(d20)
+  rollResult = diceRoll.total
+  desc += f"{diceRoll.full}\n\n"
 
-   # Rogue Reliable Talent
-   reliableTalent = False
-   if finalDieRoll <= 9 and rogueLevel >= 11:
-      reliableTalent = True
-      initialDieRoll = finalDieRoll
-      finalDieRoll = 10
+  footer = None
 
-   # Generate results
-   inputBonusString = args.last('b')
-   inputBonus = 0
-   if inputBonusString:
-      inputBonus = roll(inputBonusString)
-
-   rollResult = finalDieRoll + dexterityMod + skillBonus + inputBonus
-
-   # Generate results output
-   rollDescription = f"{d20} ("
-
-   if lucky:
-      rollDescription += f"~~1~~, Lucky => "
-
-   if reliableTalent:
-      rollDescription += f"~~{initialDieRoll}~~, Reliable Talent => "
-
-   rollDescription += f"{finalDieRoll}) + {dexterityMod}"
-
-   if skillBonus > 0:
-      rollDescription += f" + {skillBonus}"
-
-   if inputBonus > 0:
-      if 'd' in inputBonusString:
-         inputBonusDescription = f"{inputBonusString} ({inputBonus})"
+  if dc:
+    if rollResult >= int(dc):
+      color = "#00FF00"
+      desc += "Success!"
+      footer = '"You looked pretty cool while doing it, too!"'
+    else:
+      color = "#FF0000"
+      desc += "Failure!"
+      if rollResult < 10:
+        footer = '"Eeeeeeee... that was - not - good"'
+      elif rollResult <= 20:
+        footer = '"You put in a lot of sweat, but just couldn\'t crack it"'
       else:
-         inputBonusDescription = inputBonusString
+        footer = '"That was impressive, but you\'re no match for this lock"'
+        
 
-      rollDescription += f" + {inputBonusDescription}"
-
-   rollDescription += f" = {rollResult}\n\n"
-
-   desc += rollDescription
-
-   if dc:
-      if rollResult >= int(dc):
-         C = "#00FF00"
-         desc += "Success!"
-      else:
-         C = "#FF0000"
-         desc += "Failure!"
-
-   T = title[0].upper() + title[1:]
-   D = desc
+  T = title[0].upper() + title[1:]
 </drac2>
--desc "{{D}}"
+-desc "{{desc}}"
 -title "{{T}}"
--color "{{C}}"
--thumb "https://2e.aonprd.com/Images/Treasure/Thieves_Tools.webp"
+-color "{{color}}"
+{{f"-image {image}" if image else ''}}
+{{f"-thumb {thumb}" if thumb else ''}}
+{{f"-footer {footer}" if footer else ''}}
